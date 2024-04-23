@@ -69,6 +69,10 @@ public class GenerationContext
     public void LoadDatas()
     {
         s_logger.Info("load datas begin");
+        if (TextProvider == null)
+        { s_logger.Info("there is no loc Text"); }
+        s_logger.Info("ready textprovider load");
+
         TextProvider?.Load();
         DataLoaderManager.Ins.LoadDatas(this);
         s_logger.Info("load datas end");

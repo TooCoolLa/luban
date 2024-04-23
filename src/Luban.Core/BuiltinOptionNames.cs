@@ -23,16 +23,18 @@ public static class BuiltinOptionNames
     public const string SchemaCollectorFamily = "schemaCollector";
 
     public const string L10NFamily = "l10n";
+    public const string Loc = "loc";
 
     public const string L10NProviderName = "provider";
 
     public const string L10NTextFilePath = "textFile.path";
-
+    public const string LocUniqueFilePath = "locuniquefilepath";
     public const string L10NTextFileKeyFieldName = "textFile.keyFieldName";
 
     public const string L10NTextFileLanguageFieldName = "textFile.languageFieldName";
 
     public const string L10NConvertTextKeyToValue = "convertTextKeyToValue";
+    public const string LocConvertValue2Key = "value2key";
 
     //public const string L10NUnknownTextKeyListOutputFile = "unknownTextKeyListOutputFile";
 

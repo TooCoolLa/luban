@@ -131,4 +131,8 @@ public class TypeTemplateExtension : ScriptObject
     {
         return System.Web.HttpUtility.HtmlEncode(comment).Replace("\n", "<br/>");
     }
+    public static bool HasTextTag(DefField field)
+    {
+        return field.CType.HasTag("text");
+    }
 }
