@@ -109,7 +109,7 @@ public {{class_modifier __bean}} partial class {{__name}} : {{if parent_def_type
 {{~end~}}
 {{~if has_text_tag field~}}
 private {{declaring_type_name field.ctype}} {{format_property_name __code_style field.name}};
-public {{declaring_type_name field.ctype}} Get{{format_property_name __code_style field.name}} => ExternalTypeUtil.GetLoc({{declaring_type_name field.ctype}} {{format_property_name __code_style field.name}});
+public {{declaring_type_name field.ctype}} Get{{format_property_name __code_style field.name}} => ExternalTypeUtil.GetLoc({{format_property_name __code_style field.name}});
 {{~else~}}
     public readonly {{declaring_type_name field.ctype}} {{format_property_name __code_style field.name}};
     {{~end~}}
