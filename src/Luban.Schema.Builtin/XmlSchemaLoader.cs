@@ -99,7 +99,7 @@ public class XmlSchemaLoader : SchemaLoaderBase
                     XmlSchemaUtil.ValidAttrKeys(_fileName, item, _enumItemOptionalAttrs, _enumItemRequiredAttrs);
                     en.Items.Add(new EnumItem()
                     {
-                        Name = XmlUtil.GetRequiredAttribute(item, "name"),
+                        Name = XmlUtil.GetRequiredAttribute(item, "name").Trim(),
                         Alias = XmlUtil.GetOptionalAttribute(item, "alias"),
                         Value = XmlUtil.GetOptionalAttribute(item, "value"),
                         Comment = XmlUtil.GetOptionalAttribute(item, "comment"),
@@ -132,6 +132,10 @@ public class XmlSchemaLoader : SchemaLoaderBase
         string module = CurNamespace;
         string valueType = XmlUtil.GetRequiredAttribute(e, "value");
         bool defineFromFile = XmlUtil.GetOptionBoolAttribute(e, "readSchemaFromFile");
+        if (string.IsNullOrEmpty(TypeUtil.GetNamespace(valueType)))
+        {
+            valueType = TypeUtil.MakeFullName(module, valueType);
+        }
         string index = XmlUtil.GetOptionalAttribute(e, "index");
         string group = XmlUtil.GetOptionalAttribute(e, "group");
         string comment = XmlUtil.GetOptionalAttribute(e, "comment");
@@ -146,9 +150,11 @@ public class XmlSchemaLoader : SchemaLoaderBase
     {
         // "ref",
         // "path",
+        "alias",
         "group",
         "comment",
         "tags",
+        "variants",
     };
 
     private static readonly List<string> _fieldRequireAttrs = new() { "name", "type" };
@@ -170,11 +176,14 @@ public class XmlSchemaLoader : SchemaLoaderBase
         //     typeStr = typeStr + "#(path=" + pathStr + ")";
         // }
 
-        return SchemaLoaderUtil.CreateField(_fileName, XmlUtil.GetRequiredAttribute(e, "name"),
+        return SchemaLoaderUtil.CreateField(_fileName,
+            XmlUtil.GetRequiredAttribute(e, "name"),
+            XmlUtil.GetOptionalAttribute(e, "alias"),
             typeStr,
             XmlUtil.GetOptionalAttribute(e, "group"),
             XmlUtil.GetOptionalAttribute(e, "comment"),
             XmlUtil.GetOptionalAttribute(e, "tags"),
+            XmlUtil.GetOptionalAttribute(e, "variants"),
             false
         );
     }

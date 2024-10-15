@@ -6,10 +6,10 @@ using Luban.Utils;
 
 namespace Luban.Protobuf.DataTarget;
 
-[DataTarget("protobuf-bin")]
-public class ProtobufBinDataTarget : DataTargetBase
+[DataTarget("protobuf2-bin")]
+public class Protobuf2BinDataTarget : DataTargetBase
 {
-    protected override string OutputFileExt => "bytes";
+    protected override string DefaultOutputFileExt => "bytes";
 
     public void WriteList(DefTable table, List<Record> datas, MemoryStream x)
     {
@@ -27,10 +27,6 @@ public class ProtobufBinDataTarget : DataTargetBase
         var ss = new MemoryStream();
         WriteList(table, records, ss);
         ss.Flush();
-        return new OutputFile()
-        {
-            File = $"{table.OutputDataFile}.{OutputFileExt}",
-            Content = DataUtil.StreamToBytes(ss),
-        };
+        return CreateOutputFile($"{table.OutputDataFile}.{OutputFileExt}", DataUtil.StreamToBytes(ss));
     }
 }

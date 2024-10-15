@@ -8,7 +8,7 @@ namespace Luban.Bson;
 [DataTarget("bson")]
 public class BsonDataTarget : DataTargetBase
 {
-    protected override string OutputFileExt => "bson";
+    protected override string DefaultOutputFileExt => "bson";
 
 
     private void WriteAsArray(List<Record> datas, BsonDataWriter x)
@@ -27,10 +27,6 @@ public class BsonDataTarget : DataTargetBase
         var bsonWriter = new BsonDataWriter(ss);
         WriteAsArray(records, bsonWriter);
         bsonWriter.Flush();
-        return new OutputFile()
-        {
-            File = $"{table.OutputDataFile}.{OutputFileExt}",
-            Content = DataUtil.StreamToBytes(ss),
-        };
+        return CreateOutputFile($"{table.OutputDataFile}.{OutputFileExt}", DataUtil.StreamToBytes(ss));
     }
 }

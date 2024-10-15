@@ -1,6 +1,5 @@
-using System.Text.Json;
+using System.Text;
 using System.Xml;
-using Luban.DataExporter.Builtin.Json;
 using Luban.DataTarget;
 using Luban.Defs;
 using Luban.Utils;
@@ -10,7 +9,7 @@ namespace Luban.DataExporter.Builtin.Xml;
 [DataTarget("xml")]
 public class XmlDataTarget : DataTargetBase
 {
-    protected override string OutputFileExt => "xml";
+    protected override string DefaultOutputFileExt => "xml";
 
     public void WriteAsArray(List<Record> datas, XmlWriter w)
     {
@@ -28,15 +27,15 @@ public class XmlDataTarget : DataTargetBase
 
     public override OutputFile ExportTable(DefTable table, List<Record> records)
     {
-        var xwSetting = new XmlWriterSettings() { Indent = true };
+        var xwSetting = new XmlWriterSettings()
+        {
+            Indent = true,
+            Encoding = Encoding.UTF8,
+        };
         var ms = new MemoryStream();
         using var xmlWriter = XmlWriter.Create(ms, xwSetting);
         WriteAsArray(records, xmlWriter);
         xmlWriter.Flush();
-        return new OutputFile()
-        {
-            File = $"{table.OutputDataFile}.{OutputFileExt}",
-            Content = DataUtil.StreamToBytes(ms),
-        };
+        return CreateOutputFile($"{table.OutputDataFile}.{OutputFileExt}", Encoding.UTF8.GetString(DataUtil.StreamToBytes(ms)));
     }
 }

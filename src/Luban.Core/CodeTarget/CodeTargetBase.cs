@@ -1,13 +1,24 @@
 using System.Reflection;
+using System.Text;
 using Luban.CodeFormat;
 using Luban.CodeFormat.CodeStyles;
 using Luban.Defs;
+using Luban.Utils;
 
 namespace Luban.CodeTarget;
 
 public abstract class CodeTargetBase : ICodeTarget
 {
     public const string FamilyPrefix = "codeTarget";
+
+    public virtual Encoding FileEncoding
+    {
+        get
+        {
+            string encoding = EnvManager.Current.GetOptionOrDefault(Name, BuiltinOptionNames.FileEncoding, true, "");
+            return string.IsNullOrEmpty(encoding) ? Encoding.UTF8 : System.Text.Encoding.GetEncoding(encoding);
+        }
+    }
 
     protected virtual string GetFileNameWithoutExtByTypeName(string name)
     {
@@ -121,7 +132,7 @@ public abstract class CodeTargetBase : ICodeTarget
         {
             var writer = new CodeWriter();
             GenerateTables(ctx, ctx.ExportTables, writer);
-            return new OutputFile() { File = $"{GetFileNameWithoutExtByTypeName(ctx.Target.Manager)}.{FileSuffixName}", Content = writer.ToResult(FileHeader) };
+            return CreateOutputFile($"{GetFileNameWithoutExtByTypeName(ctx.Target.Manager)}.{FileSuffixName}", writer.ToResult(FileHeader));
         }));
 
         foreach (var table in ctx.ExportTables)
@@ -130,7 +141,7 @@ public abstract class CodeTargetBase : ICodeTarget
             {
                 var writer = new CodeWriter();
                 GenerateTable(ctx, table, writer);
-                return new OutputFile() { File = $"{GetFileNameWithoutExtByTypeName(table.FullName)}.{FileSuffixName}", Content = writer.ToResult(FileHeader) };
+                return CreateOutputFile($"{GetFileNameWithoutExtByTypeName(table.FullName)}.{FileSuffixName}", writer.ToResult(FileHeader));
             }));
         }
 
@@ -140,7 +151,7 @@ public abstract class CodeTargetBase : ICodeTarget
             {
                 var writer = new CodeWriter();
                 GenerateBean(ctx, bean, writer);
-                return new OutputFile() { File = $"{GetFileNameWithoutExtByTypeName(bean.FullName)}.{FileSuffixName}", Content = writer.ToResult(FileHeader) };
+                return CreateOutputFile($"{GetFileNameWithoutExtByTypeName(bean.FullName)}.{FileSuffixName}", writer.ToResult(FileHeader));
             }));
         }
 
@@ -150,7 +161,7 @@ public abstract class CodeTargetBase : ICodeTarget
             {
                 var writer = new CodeWriter();
                 GenerateEnum(ctx, @enum, writer);
-                return new OutputFile() { File = $"{GetFileNameWithoutExtByTypeName(@enum.FullName)}.{FileSuffixName}", Content = writer.ToResult(FileHeader) };
+                return CreateOutputFile($"{GetFileNameWithoutExtByTypeName(@enum.FullName)}.{FileSuffixName}", writer.ToResult(FileHeader));
             }));
         }
 
@@ -167,15 +178,21 @@ public abstract class CodeTargetBase : ICodeTarget
 
     protected abstract string FileSuffixName { get; }
 
-    protected void AddCodeFile(OutputFileManifest manifest, string fullName, CodeWriter writer)
-    {
-        var path = GetPathFromFullName(fullName);
-        manifest.AddFile(path, writer.ToResult(FileHeader));
-    }
-
     public virtual string GetPathFromFullName(string fullName)
     {
         return fullName.Replace('.', '/') + "." + FileSuffixName;
+    }
+
+    private static string GetLineEnding()
+    {
+        string endings = EnvManager.Current.GetOptionOrDefault("code", BuiltinOptionNames.LineEnding, true, "").ToLowerInvariant();
+        return StringUtil.GetLineEnding(endings);
+    }
+
+    protected OutputFile CreateOutputFile(string path, string content)
+    {
+        string finalContent = content.ReplaceLineEndings(GetLineEnding());
+        return new OutputFile() { File = path, Content = finalContent, Encoding = FileEncoding };
     }
 
     public abstract void GenerateTables(GenerationContext ctx, List<DefTable> tables, CodeWriter writer);

@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Luban;
 
 public enum OutputType
@@ -20,12 +22,6 @@ public class OutputFileManifest
     {
         TargetName = targetName;
         OutputType = outputType;
-    }
-
-
-    public void AddFile(string file, object content)
-    {
-        AddFile(new OutputFile { File = file, Content = content });
     }
 
     public void AddFile(OutputFile file)

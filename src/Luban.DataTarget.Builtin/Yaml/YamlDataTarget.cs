@@ -1,6 +1,7 @@
 using Luban.DataTarget;
 using Luban.Defs;
 using Luban.Utils;
+using System.Text;
 using YamlDotNet.RepresentationModel;
 
 namespace Luban.DataExporter.Builtin.Yaml;
@@ -8,7 +9,7 @@ namespace Luban.DataExporter.Builtin.Yaml;
 [DataTarget("yaml")]
 public class YamlDataTarget : DataTargetBase
 {
-    protected override string OutputFileExt => "yml";
+    protected override string DefaultOutputFileExt => "yml";
 
     public YamlNode WriteAsArray(List<Record> datas)
     {
@@ -29,10 +30,6 @@ public class YamlDataTarget : DataTargetBase
         var tw = new StreamWriter(ms);
         ys.Save(tw, false);
         tw.Flush();
-        return new OutputFile()
-        {
-            File = $"{table.OutputDataFile}.{OutputFileExt}",
-            Content = DataUtil.StreamToBytes(ms),
-        };
+        return CreateOutputFile($"{table.OutputDataFile}.{OutputFileExt}", Encoding.UTF8.GetString(DataUtil.StreamToBytes(ms)));
     }
 }

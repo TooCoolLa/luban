@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using Luban.CodeFormat;
 using Luban.CodeTarget;
@@ -66,6 +67,8 @@ public class GenerationContext
 
     private readonly HashSet<Type> _failedValidatorTypes = new();
 
+    private bool _exportEmptyGroupsTypes;
+
     public void LoadDatas()
     {
         s_logger.Info("load datas begin");
@@ -88,19 +91,62 @@ public class GenerationContext
         Assembly = builder.Assembly;
         IncludeTags = builder.IncludeTags;
         ExcludeTags = builder.ExcludeTags;
+        if (IncludeTags != null && IncludeTags.Count != 0 && ExcludeTags != null && ExcludeTags.Count > 0)
+        {
+            throw new Exception("option '--includeTag <tag>' and '--excludeTag <tag>' can not be set at the same time");
+        }
         TimeZone = TimeZoneUtil.GetTimeZone(builder.TimeZone);
+        _exportEmptyGroupsTypes = builder.Assembly.Target.Groups.Any(g => GlobalConf.Groups.First(gd => gd.Names.Contains(g))?.IsDefault == true);
 
         TextProvider = EnvManager.Current.TryGetOption(BuiltinOptionNames.L10NFamily, BuiltinOptionNames.L10NProviderName, false, out string providerName) ?
             L10NManager.Ins.CreateTextProvider(providerName) : null;
 
         ExportTables = Assembly.ExportTables;
         ExportTypes = CalculateExportTypes();
-        ExportBeans = ExportTypes.OfType<DefBean>().ToList();
+        ExportBeans = SortBeanTypes(ExportTypes.OfType<DefBean>().ToList());
         ExportEnums = ExportTypes.OfType<DefEnum>().ToList();
+    }
+
+    private void AddChildrenByOrder(List<DefBean> list, DefBean bean)
+    {
+        list.Add(bean);
+        if (bean.Children == null || bean.Children.Count == 0)
+        {
+            return;
+        }
+        var children = new List<DefBean>(bean.Children);
+        children.Sort((a, b) => a.FullName.CompareTo(b.FullName));
+        foreach (var child in children)
+        {
+            AddChildrenByOrder(list, child);
+        }
+    }
+
+    /// <summary>
+    /// some languages like c++ have dependencies on the order of type definitions, so we need to sort the types here
+    /// </summary>
+    /// <param name="types"></param>
+    /// <returns></returns>
+    private List<DefBean> SortBeanTypes(List<DefBean> types)
+    {
+        var sortedBeans = new List<DefBean>();
+        foreach (var bean in types)
+        {
+            if (bean.ParentDefType == null)
+            {
+                AddChildrenByOrder(sortedBeans, bean);
+            }
+        }
+        Debug.Assert(types.Count == sortedBeans.Count);
+        return sortedBeans;
     }
 
     private bool NeedExportNotDefault(List<string> groups)
     {
+        if (groups.Count == 0)
+        {
+            return _exportEmptyGroupsTypes;
+        }
         return groups.Any(Target.Groups.Contains);
     }
 
@@ -129,7 +175,7 @@ public class GenerationContext
             table.ValueTType.Apply(RefTypeVisitor.Ins, refTypes);
         }
 
-        return refTypes.Values.ToList();
+        return refTypes.OrderBy(p => p.Key).Select(p => p.Value).ToList();
     }
 
     public static string GetInputDataPath()
@@ -140,7 +186,9 @@ public class GenerationContext
     public void AddDataTable(DefTable table, List<Record> mainRecords, List<Record> patchRecords)
     {
         s_logger.Debug("AddDataTable name:{} record count:{}", table.FullName, mainRecords.Count);
-        _recordsByTables[table.FullName] = new TableDataInfo(table, mainRecords, patchRecords);
+        _recordsByTables[table.FullName] = new TableDataInfo(table,
+            mainRecords.Where(r => r.IsNotFiltered(IncludeTags, ExcludeTags)).ToList(),
+            patchRecords != null ? patchRecords.Where(r => r.IsNotFiltered(IncludeTags, ExcludeTags)).ToList() : null);
     }
 
     public List<Record> GetTableAllDataList(DefTable table)
@@ -150,20 +198,7 @@ public class GenerationContext
 
     public List<Record> GetTableExportDataList(DefTable table)
     {
-        var tableDataInfo = _recordsByTables[table.FullName];
-        if (ExcludeTags.Count == 0)
-        {
-            return tableDataInfo.FinalRecords;
-        }
-        else
-        {
-            var finalRecords = tableDataInfo.FinalRecords.Where(r => r.IsNotFiltered(ExcludeTags)).ToList();
-            if (table.IsSingletonTable && finalRecords.Count != 1)
-            {
-                throw new Exception($"配置表 {table.FullName} 是单值表 mode=one,但数据个数:{finalRecords.Count} != 1");
-            }
-            return finalRecords;
-        }
+        return _recordsByTables[table.FullName].FinalRecords;
     }
 
     public static List<Record> ToSortByKeyDataList(DefTable table, List<Record> originRecords)

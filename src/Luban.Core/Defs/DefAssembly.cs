@@ -33,7 +33,19 @@ public class DefAssembly
 
     public List<DefTable> ExportTables => _exportTables;
 
-    public DefAssembly(RawAssembly assembly, string target, List<string> outputTables)
+    private Dictionary<string, string> _variants;
+
+    public bool TryGetVariantName(string variantKey, out string variantName)
+    {
+        if (_variants == null)
+        {
+            variantName = "";
+            return false;
+        }
+        return _variants.TryGetValue(variantKey, out variantName);
+    }
+
+    public DefAssembly(RawAssembly assembly, string target, List<string> outputTables, List<RawGroup> groupDefs, Dictionary<string, string> variants)
     {
         _targets = assembly.Targets;
         Target = GetTarget(target);
@@ -41,6 +53,7 @@ public class DefAssembly
         {
             throw new Exception($"target:{target} is invalid");
         }
+        _variants = variants;
 
         foreach (var g in assembly.RefGroups)
         {
@@ -69,7 +82,7 @@ public class DefAssembly
         List<DefTable> originTables = GetAllTables();
         if (outputTables.Count == 0)
         {
-            _exportTables = originTables.Where(t => NeedExport(t.Groups)).ToList();
+            _exportTables = originTables.Where(t => NeedExport(t.Groups, groupDefs)).ToList();
         }
         else
         {
@@ -113,11 +126,11 @@ public class DefAssembly
         }
     }
 
-    public bool NeedExport(List<string> groups)
+    public bool NeedExport(List<string> groups, List<RawGroup> groupDefs)
     {
         if (groups.Count == 0)
         {
-            return true;
+            return groupDefs == null || Target.Groups.Any(g => groupDefs.FirstOrDefault(gd => gd.Names.Contains(g))?.IsDefault == true);
         }
         return groups.Any(g => Target.Groups.Contains(g));
     }

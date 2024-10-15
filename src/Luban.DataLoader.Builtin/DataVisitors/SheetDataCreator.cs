@@ -210,18 +210,20 @@ class SheetDataCreator : ITypeFuncVisitor<RowColumnSheet, TitleRow, DType>
     }
 
 
-    private static string ParseString(object d)
+    public static string ParseString(object d, bool nullable)
     {
         if (d == null)
         {
-            return string.Empty;
+            return nullable ? null : string.Empty;
         }
 
-        if (d is string s)
+        string s = d is string str ? str : d.ToString();
+
+        if (nullable && string.IsNullOrEmpty(s))
         {
-            return DataUtil.UnEscapeRawString(s);
+            return null;
         }
-        return d.ToString();
+        return DataUtil.UnEscapeRawString(s);
     }
 
     public DType Accept(TString type, RowColumnSheet sheet, TitleRow row)
@@ -231,14 +233,13 @@ class SheetDataCreator : ITypeFuncVisitor<RowColumnSheet, TitleRow, DType>
         {
             ThrowIfNonEmpty(row);
         }
-        var s = ParseString(x);
+        var s = ParseString(x, type.IsNullable);
         if (s == null)
         {
             if (type.IsNullable)
             {
                 return null;
             }
-
             throw new InvalidExcelDataException("字段不是nullable类型，不能为null");
         }
         return DString.ValueOf(type, s);
@@ -258,6 +259,29 @@ class SheetDataCreator : ITypeFuncVisitor<RowColumnSheet, TitleRow, DType>
         return DataUtil.CreateDateTime(d.ToString());
     }
 
+    private bool TryGetBeanField(TitleRow row, DefField field, out TitleRow ele)
+    {
+        if (!string.IsNullOrEmpty(field.CurrentVariantNameWithFieldName))
+        {
+            ele = row.GetSubTitleNamedRow(field.CurrentVariantNameWithFieldName);
+            if (ele != null)
+            {
+                return true;
+            }
+        }
+        ele = row.GetSubTitleNamedRow(field.Name);
+        if (ele != null)
+        {
+            return true;
+        }
+        if (!string.IsNullOrEmpty(field.Alias))
+        {
+            ele = row.GetSubTitleNamedRow(field.Alias);
+            return ele != null;
+        }
+        return false;
+    }
+
     private List<DType> CreateBeanFields(DefBean bean, RowColumnSheet sheet, TitleRow row)
     {
         var list = new List<DType>();
@@ -265,8 +289,7 @@ class SheetDataCreator : ITypeFuncVisitor<RowColumnSheet, TitleRow, DType>
 
         {
             string fname = f.Name;
-            TitleRow field = row.GetSubTitleNamedRow(fname);
-            if (field == null)
+            if (!TryGetBeanField(row, f, out var field))
             {
                 throw new Exception($"bean:'{bean.FullName}' 缺失 列:'{fname}'，请检查是否写错或者遗漏");
             }

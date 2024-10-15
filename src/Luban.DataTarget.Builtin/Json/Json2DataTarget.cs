@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Luban.DataExporter.Builtin.Binary;
 using Luban.DataTarget;
@@ -9,7 +10,7 @@ namespace Luban.DataExporter.Builtin.Json;
 [DataTarget("json2")]
 public class Json2DataTarget : JsonDataTarget
 {
-    protected override string OutputFileExt => "json";
+    protected override string DefaultOutputFileExt => "json";
 
     private void WriteAsObject(DefTable table, List<Record> datas, Utf8JsonWriter x)
     {
@@ -58,10 +59,6 @@ public class Json2DataTarget : JsonDataTarget
         });
         WriteAsObject(table, records, jsonWriter);
         jsonWriter.Flush();
-        return new OutputFile()
-        {
-            File = $"{table.OutputDataFile}.{OutputFileExt}",
-            Content = DataUtil.StreamToBytes(ss),
-        };
+        return CreateOutputFile($"{table.OutputDataFile}.{OutputFileExt}", Encoding.UTF8.GetString(DataUtil.StreamToBytes(ss)));
     }
 }
